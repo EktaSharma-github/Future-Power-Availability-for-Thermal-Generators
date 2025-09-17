@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Availability Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+            background-color: white;
+            min-height: 100vh;
+        }
+
+        .title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 24px;
+            color: #1f2937;
+        }
+
+        .controls-panel {
+            background-color: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .control-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.875rem;
+        }
+
+        .control-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .checkbox-container {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 8px;
+            background: white;
+            max-height: 128px;
+            overflow-y: auto;
+        }
+
+        .select-all-btn {
+            font-size: 0.75rem;
+            color: #2563eb;
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 8px;
+            text-decoration: underline;
+        }
+
+        .select-all-btn:hover {
+            color: #1d4ed8;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .checkbox-item input {
+            margin-right: 6px;
+        }
+
+        .button-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-secondary {
+            background-color: #4b5563;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #374151;
+        }
+
+        .btn-success {
+            background-color: #059669;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #047857;
+        }
+
+        .download-group {
+            display: flex;
+        }
+
+        .download-select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-right: none;
+            border-radius: 6px 0 0 6px;
+            background: white;
+            font-size: 0.875rem;
+        }
+
+        .download-btn {
+            padding: 8px;
+            background-color: #059669;
+            color: white;
+            border: none;
+            border-radius: 0 6px 6px 0;
+            cursor: pointer;
+        }
+
+        .download-btn:hover {
+            background-color: #047857;
+        }
+
+        .legend-control {
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .legend-control input {
+            margin-right: 8px;
+        }
+
+        .config-panel {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .config-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .close-btn:hover {
+            color: #374151;
+        }
+
+        .year-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .year-tab {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .year-tab.active {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .year-tab:not(.active) {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .year-tab:not(.active):hover {
+            background-color: #d1d5db;
+        }
+
+        .config-table-container {
+            overflow-x: auto;
+        }
+
+        .config-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e5e7eb;
+        }
+
+        .config-table th,
+        .config-table td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .config-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+
+        .config-table th:first-child {
+            text-align: left;
+        }
+
+        .config-cell {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .config-cell:hover {
+            background-color: #f3f4f6;
+        }
+
+        .config-input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.875rem;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .edit-icon {
+            width: 12px;
+            height: 12px;
+            opacity: 0.5;
+        }
+
+        .chart-container {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 400px;
+        }
+
+        .no-data {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            color: #6b7280;
+            flex-direction: column;
+        }
+
+        .no-data h3 {
+            font-size: 1.125rem;
+            margin-bottom: 8px;
+        }
+
+        .no-data p {
+            font-size: 0.875rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Power Availability Dashboard</h1>
+
+        <!-- Controls -->
+        <div class="controls-panel">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label class="control-label">Utility</label>
+                    <select id="utilitySelect" class="control-select">
+                        <option value="chhattisgarh">Chhattisgarh</option>
+                        <option value="bihar">Bihar</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Generator Type</label>
+                    <select id="generatorSelect" class="control-select">
+                        <option value="thermal">Thermal</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Ownership</label>
+                    <div class="checkbox-container">
+                        <button class="select-all-btn" onclick="selectAllOwnership()">Select All</button>
+                        <div id="ownershipContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="control-group">
+                    <label class="control-label">Years</label>
+                    <div class="checkbox-container">
+                        <div class="checkbox-grid" id="yearsContainer"></div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Months</label>
+                    <div class="checkbox-container">
+                        <div class="checkbox-grid" id="monthsContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-controls">
+                <button class="btn btn-primary" onclick="generateChart()">
+                    <span>▶</span> Go
+                </button>
+
+                <button class="btn btn-secondary" onclick="toggleConfiguration()">
+                    <span>⚙</span> Configuration
+                </button>
+
+                <div class="download-group">
+                    <select class="download-select" id="downloadFormat">
+                        <option value="" disabled selected>Download As...</option>
+                        <option value="csv">CSV</option>
+                        <option value="excel">Excel</option>
+                        <option value="jpeg">Chart Image</option>
+                    </select>
+                    <button class="download-btn" onclick="downloadData()">⬇</button>
+                </div>
+
+                <label class="legend-control">
+                    <input type="checkbox" id="showLegends" checked>
+                    Show Legends
+                </label>
+            </div>
+        </div>
+
+        <!-- Configuration Panel -->
+        <div id="configurationPanel" class="config-panel hidden">
+            <div class="config-header">
+                <h2 class="config-title">Thermal Generator Configuration</h2>
+                <button class="close-btn" onclick="toggleConfiguration()">✕</button>
+            </div>
+
+            <div class="year-tabs" id="yearTabs"></div>
+
+            <div class="config-table-container">
+                <table class="config-table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>% Availability</th>
+                            <th>% Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody id="configTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="chart-container">
+            <div id="noDataMessage" class="no-data">
+                <h3>No data to display</h3>
+                <p>Click "Go" to generate chart data</p>
+            </div>
+            <canvas id="chartCanvas" class="chart-canvas hidden"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            selectedUtility: 'chhattisgarh',
+            selectedGenerator: 'thermal',
+            selectedOwnership: ['ISGS', 'SGS', 'IPP', 'GNA'],
+            selectedYears: ['2025'],
+            selectedMonths: ['january'],
+            showLegends: true,
+            showConfiguration: false,
+            chartData: [],
+            configPage: 2025,
+            editingCell: null,
+            chartInstance: null,
+            configData: {}
+        };
+
+        // Data arrays
+        const utilities = ['chhattisgarh', 'bihar'];
+        const generatorTypes = ['thermal'];
+        const ownershipTypes = ['ISGS', 'SGS', 'IPP', 'GNA'];
+        const years = Array.from({length: 11}, (_, i) => (2025 + i).toString());
+        const months = ['january', 'february', 'march', 'april', 'may', 'june', 
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthsCapitalized = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+
+        // Initialize configuration data
+        function initConfigData() {
+            for (let year = 2025; year <= 2035; year++) {
+                state.configData[year] = {};
+                monthsCapitalized.forEach(month => {
+                    state.configData[year][month] = {
+                        availability: 85,
+                        loss: 4
+                    };
+                });
+            }
+        }
+
+        // Initialize UI components
+        function initializeUI() {
+            // Initialize ownership checkboxes
+            const ownershipContainer = document.getElementById('ownershipContainer');
+            ownershipTypes.forEach(ownership => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.innerHTML = `
+                    <input type="checkbox" ${state.selectedOwnership.includes(ownership) ? 'checked' : ''} 
+                           onchange="handleOwnershipChange('${ownership}')">
+                    <span>${ownership}</span>
+                `;
+                ownershipContainer.appendChild(label);
+            });
+
+            // Initialize years checkboxes
+            const yearsContainer = document.getElementById('yearsContainer');
+            years.forEach(year => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.innerHTML = `
+                    <input type="checkbox" ${state.selectedYears.includes(year) ? 'checked' : ''} 
+                           onchange="handleYearChange('${year}')">
+                    <span>${year}</span>
+                `;
+                yearsContainer.appendChild(label);
+            });
+
+            // Initialize months checkboxes
+            const monthsContainer = document.getElementById('monthsContainer');
+            months.forEach(month => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.innerHTML = `
+                    <input type="checkbox" ${state.selectedMonths.includes(month) ? 'checked' : ''} 
+                           onchange="handleMonthChange('${month}')">
+                    <span>${month.slice(0, 3)}</span>
+                `;
+                monthsContainer.appendChild(label);
+            });
+
+            // Initialize year tabs
+            initializeYearTabs();
+            
+            // Initialize config table
+            initializeConfigTable();
+        }
+
+        function initializeYearTabs() {
+            const yearTabs = document.getElementById('yearTabs');
+            yearTabs.innerHTML = '';
+            
+            years.slice(0, 5).forEach(year => {
+                const button = document.createElement('button');
+                button.className = `year-tab ${parseInt(year) === state.configPage ? 'active' : ''}`;
+                button.textContent = year;
+                button.onclick = () => setConfigPage(parseInt(year));
+                yearTabs.appendChild(button);
+            });
+
+            const separator = document.createElement('span');
+            separator.textContent = '|';
+            separator.style.padding = '6px 12px';
+            yearTabs.appendChild(separator);
+
+            years.slice(5).forEach(year => {
+                const button = document.createElement('button');
+                button.className = `year-tab ${parseInt(year) === state.configPage ? 'active' : ''}`;
+                button.textContent = year;
+                button.onclick = () => setConfigPage(parseInt(year));
+                yearTabs.appendChild(button);
+            });
+        }
+
+        function initializeConfigTable() {
+            const tbody = document.getElementById('configTableBody');
+            tbody.innerHTML = '';
+
+            monthsCapitalized.forEach(month => {
+                const row = document.createElement('tr');
+                const config = state.configData[state.configPage]?.[month] || { availability: 85, loss: 4 };
+                
+                row.innerHTML = `
+                    <td style="text-align: left; font-weight: 600;">${month}</td>
+                    <td id="cell-${state.configPage}-${month}-availability">
+                        ${renderConfigCell(state.configPage, month, 'availability', config.availability)}
+                    </td>
+                    <td id="cell-${state.configPage}-${month}-loss">
+                        ${renderConfigCell(state.configPage, month, 'loss', config.loss)}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderConfigCell(year, month, field, value) {
+            const cellId = `${year}-${month}-${field}`;
+            
+            if (state.editingCell === cellId) {
+                return `
+                    <input type="number" 
+                           class="config-input" 
+                           value="${value}" 
+                           id="input-${cellId}"
+                           onblur="finishEdit('${cellId}')"
+                           onkeypress="handleKeyPress(event, '${cellId}')"
+                           autofocus>
+                `;
+            } else {
+                return `
+                    <div class="config-cell" onclick="startEdit('${cellId}')">
+                        ${value}%
+                        <span class="edit-icon">✏️</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Event handlers
+        function handleOwnershipChange(ownership) {
+            if (state.selectedOwnership.includes(ownership)) {
+                if (state.selectedOwnership.length > 1) {
+                    state.selectedOwnership = state.selectedOwnership.filter(o => o !== ownership);
+                }
+            } else {
+                state.selectedOwnership.push(ownership);
+            }
+        }
+
+        function selectAllOwnership() {
+            state.selectedOwnership = [...ownershipTypes];
+            // Update checkboxes
+            const checkboxes = document.querySelectorAll('#ownershipContainer input');
+            checkboxes.forEach(cb => cb.checked = true);
+        }
+
+        function handleYearChange(year) {
+            if (state.selectedYears.includes(year)) {
+                if (state.selectedYears.length > 1) {
+                    state.selectedYears = state.selectedYears.filter(y => y !== year);
+                }
+            } else {
+                state.selectedYears.push(year);
+            }
+        }
+
+        function handleMonthChange(month) {
+            if (state.selectedMonths.includes(month)) {
+                if (state.selectedMonths.length > 1) {
+                    state.selectedMonths = state.selectedMonths.filter(m => m !== month);
+                }
+            } else {
+                state.selectedMonths.push(month);
+            }
+        }
+
+        function toggleConfiguration() {
+            state.showConfiguration = !state.showConfiguration;
+            const panel = document.getElementById('configurationPanel');
+            if (state.showConfiguration) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        function setConfigPage(year) {
+            state.configPage = year;
+            initializeYearTabs();
+            initializeConfigTable();
+        }
+
+        function startEdit(cellId) {
+            state.editingCell = cellId;
+            const [year, month, field] = cellId.split('-');
+            
+            // Update the specific cell
+            const cellElement = document.getElementById(`cell-${cellId}`);
+            const config = state.configData[parseInt(year)]?.[month] || { availability: 85, loss: 4 };
+            cellElement.innerHTML = renderConfigCell(parseInt(year), month, field, config[field]);
+            
+            // Focus the input
+            setTimeout(() => {
+                const input = document.getElementById(`input-${cellId}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 10);
+        }
+
+        function finishEdit(cellId) {
+            const [year, month, field] = cellId.split('-');
+            const input = document.getElementById(`input-${cellId}`);
+            
+            if (input) {
+                const newValue = parseFloat(input.value);
+                if (!isNaN(newValue)) {
+                    handleConfigEdit(parseInt(year), month, field, newValue);
+                }
+            }
+            
+            state.editingCell = null;
+            
+            // Update the cell display
+            const cellElement = document.getElementById(`cell-${cellId}`);
+            const config = state.configData[parseInt(year)]?.[month] || { availability: 85, loss: 4 };
+            cellElement.innerHTML = renderConfigCell(parseInt(year), month, field, config[field]);
+        }
+
+        function handleKeyPress(event, cellId) {
+            if (event.key === 'Enter') {
+                finishEdit(cellId);
+            } else if (event.key === 'Escape') {
+                state.editingCell = null;
+                const [year, month, field] = cellId.split('-');
+                const cellElement = document.getElementById(`cell-${cellId}`);
+                const config = state.configData[parseInt(year)]?.[month] || { availability: 85, loss: 4 };
+                cellElement.innerHTML = renderConfigCell(parseInt(year), month, field, config[field]);
+            }
+        }
+
+        function handleConfigEdit(year, month, field, value) {
+            if (!state.configData[year]) state.configData[year] = {};
+            if (!state.configData[year][month]) {
+                state.configData[year][month] = { availability: 85, loss: 4 };
+            }
+            
+            state.configData[year][month][field] = value;
+            
+            // Refresh the table
+            initializeConfigTable();
+            
+            // Regenerate chart if current selection is affected
+            if (state.selectedYears.includes(year.toString()) && 
+                state.selectedMonths.includes(month.toLowerCase())) {
+                setTimeout(generateChart, 100);
+            }
+        }
+
+        // Data generation
+        function generateBasePowerData() {
+            return Array.from({length: 96}, (_, i) => {
+                const hour = Math.floor(i / 4);
+                const quarter = (i % 4) * 15;
+                const timeBlock = `${hour.toString().padStart(2, '0')}:${quarter.toString().padStart(2, '0')}`;
+                
+                const basePower = 800 + Math.sin((i / 96) * 2 * Math.PI) * 200 + 
+                                 Math.sin((i / 96) * 4 * Math.PI) * 100 + 
+                                 Math.random() * 100;
+                
+                return {
+                    timeBlock,
+                    basePower: Math.max(500, basePower)
+                };
+            });
+        }
+
+        function calculatePower(basePower, month, year) {
+            const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1);
+            const config = state.configData[parseInt(year)]?.[monthCapitalized] || { availability: 85, loss: 4 };
+            
+            const availablePower = basePower * (config.availability / 100);
+            const finalPower = availablePower * ((100 - config.loss) / 100);
+            
+            return Math.round(finalPower);
+        }
+
+        function generateChart() {
+            const baseData = generateBasePowerData();
+            
+            state.chartData = baseData.map(item => {
+                const result = { timeBlock: item.timeBlock };
+                
+                state.selectedYears.forEach(year => {
+                    state.selectedMonths.forEach(month => {
+                        const key = `${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+                        result[key] = calculatePower(item.basePower, month, year);
+                    });
+                });
+                
+                return result;
+            });
+
+            renderChart();
+        }
+
+        function renderChart() {
+            const canvas = document.getElementById('chartCanvas');
+            const noDataMessage = document.getElementById('noDataMessage');
+            const showLegends = document.getElementById('showLegends').checked;
+
+            if (state.chartData.length === 0) {
+                canvas.classList.add('hidden');
+                noDataMessage.classList.remove('hidden');
+                return;
+            }
+
+            canvas.classList.remove('hidden');
+            noDataMessage.classList.add('hidden');
+
+            // Destroy existing chart
+            if (state.chartInstance) {
+                state.chartInstance.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            
+            // Prepare datasets
+            const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0', '#ffb347', '#87ceeb'];
+            let colorIndex = 0;
+            
+            const datasets = [];
+            state.selectedYears.forEach(year => {
+                state.selectedMonths.forEach(month => {
+                    const key = `${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+                    const color = colors[colorIndex % colors.length];
+                    
+                    datasets.push({
+                        label: key,
+                        data: state.chartData.map(item => item[key]),
+                        borderColor: color,
+                        backgroundColor: color + '20',
+                        fill: false,
+                        tension: 0.1,
+                        pointRadius: 0
+                    });
+                    
+                    colorIndex++;
+                });
+            });
+
+            state.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: state.chartData.map(item => item.timeBlock),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: showLegends
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time Block'
+                            },
+                            ticks: {
+                                callback: function(value, index) {
+                                    // Show every 12th label (every 3 hours)
+                                    return index % 12 === 0 ? this.getLabelForValue(value) : '';
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Power (MW)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        function downloadData() {
+            const format = document.getElementById('downloadFormat').value;
+            if (!format) {
+                alert('Please select a download format');
+                return;
+            }
+
+            if (state.chartData.length === 0) {
+                alert('No data to download. Please generate chart data first.');
+                return;
+            }
+
+            if (format === 'csv' || format === 'excel') {
+                const headers = ['Time Block'];
+                state.selectedYears.forEach(year => {
+                    state.selectedMonths.forEach(month => {
+                        headers.push(`${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`);
+                    });
+                });
+
+                const csvContent = [
+                    headers,
+                    ...state.chartData.map(row => [
+                        row.timeBlock,
+                        ...state.selectedYears.flatMap(year => 
+                            state.selectedMonths.map(month => {
+                                const key = `${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+                                return row[key] || 0;
+                            })
+                        )
+                    ])
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `power_availability_data.${format === 'excel' ? 'csv' : format}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } else if (format === 'jpeg') {
+                if (state.chartInstance) {
+                    const url = state.chartInstance.toBase64Image('image/jpeg', 1);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'power_availability_chart.jpg';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } else {
+                    alert('No chart to download. Please generate chart data first.');
+                }
+            }
+
+            // Reset the select
+            document.getElementById('downloadFormat').value = '';
+        }
+
+        // Update legend visibility when checkbox changes
+        document.getElementById('showLegends').addEventListener('change', function() {
+            state.showLegends = this.checked;
+            if (state.chartInstance) {
+                state.chartInstance.options.plugins.legend.display = this.checked;
+                state.chartInstance.update();
+            }
+        });
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initConfigData();
+            initializeUI();
+        });
+    </script>
+</body>
+</html>
